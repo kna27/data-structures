@@ -159,7 +159,8 @@ Mod Mod::inv(long r0)
 
     if (m != 1)
     {
-        throw std::runtime_error("Inverse doesn't exist. r0 and modulus must be co-prime.");
+        std::cerr << "Inverse doesn't exist. r0 and modulus must be co-prime.\n";
+        exit(1);
     }
 
     if (x1 < 0)
