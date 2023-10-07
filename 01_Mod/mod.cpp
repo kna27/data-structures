@@ -83,6 +83,11 @@ Mod &Mod::operator*=(const Mod &m)
 
 Mod &Mod::operator/=(const Mod &m)
 {
+    if (m.x == 0)
+    {
+        std::cerr << "Cannot divide by zero\n";
+        exit(1);
+    }
     Mod inverse(x);
     inverse *= m.pwr(-1);
     return *this = inverse;
@@ -120,7 +125,7 @@ long Mod::val() const { return x; }
 
 void Mod::set_modulus(long m)
 {
-    if (m <= 1)
+    if (m < 2)
     {
         std::cerr << "Modulus must be at least 2\n";
         exit(1);

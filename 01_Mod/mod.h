@@ -1,3 +1,10 @@
+/*
+Due: October 6, 2023
+Assignment: Implement the following class. Make sure that it handles all signed 8-byte integers
+correctly and without overflow.
+If the user attempts to divide by zero or set the modulus to something < 2, you should throw an
+exception.
+*/
 #ifndef ____Mod__
 #define ____Mod__
 #include <iostream>
