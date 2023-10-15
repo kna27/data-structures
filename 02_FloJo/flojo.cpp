@@ -29,13 +29,13 @@ struct Link
     T info;
     Link *next;
 };
+
 std::vector<int> josephus(int n, int k)
 {
     if (n <= 0 || k <= 0)
     {
         return {};
     }
-    k = k % n;
     Link<int> *head = new Link<int>(1);
     Link<int> *tail = head;
     for (int i = 2; i <= n; i++)
@@ -73,9 +73,57 @@ std::vector<int> josephus(int n, int k)
 
 vector<int> loopTail(Link<int> *head)
 {
-    return {}; // TODO
-}
+    if (!head || !head->next)
+    {
+        return {0, 0};
+    }
+    // Detect if there is a loop
+    Link<int> *slow = head;
+    Link<int> *fast = head;
+    bool hasLoop = false;
+    while (fast != nullptr && fast->next != nullptr)
+    {
+        slow = slow->next;
+        fast = fast->next->next;
+        if (slow == fast)
+        {
+            hasLoop = true;
+            break;
+        }
+    }
+    if (!hasLoop)
+    {
+        return {0, 0};
+    }
 
+    // Find the length of the loop
+    int loopLength = 0;
+    do
+    {
+        fast = fast->next;
+        loopLength++;
+    } while (slow != fast);
+
+    // Find the length of the tail
+    Link<int> *ptr1 = head;
+    Link<int> *ptr2 = slow;
+
+    for (int i = 0; i < loopLength; i++)
+    {
+        ptr2 = ptr2->next;
+    }
+
+    int tailLength = 0;
+    while (ptr1 != ptr2)
+    {
+        ptr1 = ptr1->next;
+        ptr2 = ptr2->next;
+        tailLength++;
+    }
+
+    return {loopLength, tailLength};
+}
+/*
 int main()
 {
     cout << "josephus tests\n";
@@ -96,9 +144,45 @@ int main()
     vector<int> j8 = josephus(5, 1);
     cout << "\tTest 8: " << (j8 == vector<int>{1, 2, 3, 4, 5}) << '\n';
     vector<int> j9 = josephus(5, 8);
-    cout << "\tTest 9: " << (j9 == vector<int>{3, 1, 5, 2, 4}) << '\n';
+    cout << "\tTest 9: " << (j9 == vector<int>{3, 2, 5, 4, 1}) << '\n';
 
     cout << "loopTail tests\n";
-    // TODO
+    Link<int> *l1 = nullptr;
+    vector<int> t1 = loopTail(l1);
+    cout << "\tTest 1: " << (t1 == vector<int>{0, 0}) << '\n';
+
+    // Test 2: List without loop
+    Link<int> *l2 = new Link<int>(1);
+    l2->next = new Link<int>(2);
+    vector<int> t2 = loopTail(l2);
+    cout << "\tTest 2: " << (t2 == vector<int>{0, 0}) << '\n';
+
+    // Test 3: List with loop, no tail
+    Link<int> *l3 = new Link<int>(1);
+    l3->next = new Link<int>(2);
+    l3->next->next = new Link<int>(3);
+    l3->next->next->next = l3;
+    vector<int> t3 = loopTail(l3);
+    cout << "\tTest 3: " << (t3 == vector<int>{3, 0}) << '\n';
+
+    // Test 4: List with loop and tail
+    Link<int> *l4 = new Link<int>(1);
+    l4->next = new Link<int>(2);
+    l4->next->next = new Link<int>(3);
+    l4->next->next->next = new Link<int>(4);
+    l4->next->next->next->next = l4->next;
+    vector<int> t4 = loopTail(l4);
+    cout << "\tTest 4: " << (t4 == vector<int>{3, 1}) << '\n';
+
+    Link<int> *l5 = new Link<int>(1);
+    vector<int> t5 = loopTail(l5);
+    cout << "\tTest 5: " << (t5 == vector<int>{0, 0}) << '\n';
+
+    // Test 6: Single node, self-loop
+    Link<int> *l6 = new Link<int>(1);
+    l6->next = l6;
+    vector<int> t6 = loopTail(l6);
+    cout << "\tTest 6: " << (t6 == vector<int>{1, 0}) << '\n';
     return 0;
 }
+*/
