@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <cmath>
 #include <thread>
 
 using namespace std;
@@ -95,12 +94,12 @@ int score_hand(vector<Card> &cards)
     // Flush
     if (isFlush)
     {
-        int score = FLUSH * mult_factor;
-        for (int i = 4; i >= 0; --i)
-        {
-            score += cards[i].rank * pow(15, i);
-        }
-        return score;
+        return (FLUSH * mult_factor) +
+               cards[4].rank * 50625 +
+               cards[3].rank * 3375 +
+               cards[2].rank * 225 +
+               cards[1].rank * 15 +
+               cards[0].rank * 1;
     }
 
     // Straight
@@ -178,24 +177,60 @@ int score_hand(vector<Card> &cards)
                     kickers[index++] = cards[j].rank;
                 }
             }
-            // Sort kickers using bubble sort
-            for (int k = 0; k < 2; ++k)
+            int temp;
+            if (kickers[0] < kickers[1])
             {
-                for (int l = 0; l < 2 - k; ++l)
-                {
-                    if (kickers[l] < kickers[l + 1])
-                    {
-                        swap(kickers[l], kickers[l + 1]);
-                    }
-                }
+                temp = kickers[0];
+                kickers[0] = kickers[1];
+                kickers[1] = temp;
             }
+
+            if (kickers[1] < kickers[2])
+            {
+                temp = kickers[1];
+                kickers[1] = kickers[2];
+                kickers[2] = temp;
+            }
+
+            if (kickers[0] < kickers[1])
+            {
+                temp = kickers[0];
+                kickers[0] = kickers[1];
+                kickers[1] = temp;
+            }
+
             return PAIR * mult_factor + pairRank * 3375 + kickers[0] * 225 + kickers[1] * 15 + kickers[2]; // 3375 = 15*15*15
         }
     }
 
     // High card
-    int score = cards[4].rank * pow(15, 4) + cards[3].rank * pow(15, 3) + cards[2].rank * pow(15, 2) + cards[1].rank * 15 + cards[0].rank;
-    return score;
+    return cards[4].rank * 50625 +
+           cards[3].rank * 3375 +
+           cards[2].rank * 225 +
+           cards[1].rank * 15 +
+           cards[0].rank * 1;
+}
+
+void score_hands_parallel(const vector<int> &encoded_hands, vector<int> &scores, int left, int right, int depth = 0)
+{
+    if (left < right)
+    {
+        if (depth < MAX_DEPTH)
+        {
+            int mid = left + (right - left) / 2;
+            thread left_thread(score_hands_parallel, ref(encoded_hands), ref(scores), left, mid, depth + 1);
+            score_hands_parallel(encoded_hands, scores, mid + 1, right, depth + 1);
+            left_thread.join();
+        }
+        else
+        {
+            for (int i = left; i <= right; i++)
+            {
+                vector<Card> sorted_hand = decode_and_sort_hand(encoded_hands[i]);
+                scores[i] = score_hand(sorted_hand);
+            }
+        }
+    }
 }
 
 void merge(vector<int> &a, vector<int> &scores, int left, int mid, int right)
@@ -285,12 +320,63 @@ void merge_sort(vector<int> &a, vector<int> &scores, int left, int right, int de
 
 void poker_sort(vector<int> &a)
 {
-    vector<int> scores(a.size());
-    for (int i = 0; i < a.size(); i++)
+    int n = a.size();
+    vector<int> scores(n);
+    score_hands_parallel(a, scores, 0, n - 1);
+    merge_sort(a, scores, 0, n - 1);
+}
+
+#include <fstream>
+#include <chrono>
+using namespace chrono;
+
+void test_poker_sort()
+{
+    for (int i = 1; i <= 3; i++)
     {
-        vector<Card> sorted_hand = decode_and_sort_hand(a[i]);
-        int score = score_hand(sorted_hand);
-        scores[i] = score;
+
+        ifstream hands("hand" + to_string(i) + ".txt");
+        int N;
+        hands >> N;
+        vector<int> a(N);
+        for (int i = 0; i < N; i++)
+        {
+            hands >> a[i];
+        }
+
+        auto start = high_resolution_clock::now();
+        poker_sort(a);
+        auto end = high_resolution_clock::now();
+        ifstream sorted_hands("hand" + to_string(i) + "_sorted.txt");
+        int wrong = 0;
+        for (int i = 0; i < 1000; i++)
+        {
+            int curr;
+            sorted_hands >> curr;
+            wrong += curr != a[i];
+            if (curr != a[i])
+            {
+                cout << i << ' ' << curr << ' ' << a[i] << '\n';
+            }
+        }
+
+        auto duration = duration_cast<milliseconds>(end - start);
+        if (wrong == 0)
+        {
+            cout << "Your code was correct. It sorted in " << duration.count() << " milliseconds.\n";
+        }
+        else
+        {
+            cout << "Your code *might've* been correct in the event of equal hands, but it could very likely be wrong. There were " << wrong << " hands out of place, and your sort took " << duration.count() << " milliseconds.\n";
+        }
     }
-    merge_sort(a, scores, 0, a.size() - 1);
+}
+
+int main()
+{
+    for (int i = 0; i <= 5; i++)
+    {
+        test_poker_sort();
+        cout << "------" << endl;
+    }
 }
