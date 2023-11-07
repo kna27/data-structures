@@ -1,2 +1,2 @@
 # data-structures
-Notes and labs for Data Structures
+Labs for Data Structures BCA 2023-2024 taught by Dr. Nevard.

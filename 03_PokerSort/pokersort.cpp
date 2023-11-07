@@ -1,11 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <thread>
 
-using std::cout;
-using std::endl;
-using std::vector;
+using namespace std;
 
+const int MAX_DEPTH = 5;
 enum HandType
 {
     HIGH_CARD = 1,
@@ -32,8 +32,17 @@ public:
     }
 };
 
-void insertion_sort(std::vector<Card> &cards)
+vector<Card> decode_and_sort_hand(int hand)
 {
+    vector<Card> cards(5);
+    for (int i = 0; i < 5; ++i)
+    {
+        int card = hand % 52;
+        cards[i] = Card(card / 4, card % 4);
+        hand /= 52;
+    }
+
+    // Sort the cards by rank
     for (int i = 1; i < 5; ++i)
     {
         Card key = cards[i];
@@ -45,11 +54,13 @@ void insertion_sort(std::vector<Card> &cards)
         }
         cards[j + 1] = key;
     }
+    return cards;
 }
 
-int score_hand(std::vector<Card> &cards)
+int score_hand(vector<Card> &cards)
 {
-    int mult_factor = 100000;
+    // TODO check for pair first bc then cant be straight
+    int mult_factor = 1000000;
     // Check for Ace-low straight (A-2-3-4-5)
     bool isAceLowStraight = (cards[0].rank == 0 && cards[1].rank == 1 && cards[2].rank == 2 && cards[3].rank == 3 && cards[4].rank == 12);
 
@@ -87,7 +98,7 @@ int score_hand(std::vector<Card> &cards)
         int score = FLUSH * mult_factor;
         for (int i = 4; i >= 0; --i)
         {
-            score += cards[i].rank * std::pow(15, i);
+            score += cards[i].rank * pow(15, i);
         }
         return score;
     }
@@ -108,7 +119,9 @@ int score_hand(std::vector<Card> &cards)
             int kicker1 = cards[(i + 3) % 5].rank;
             int kicker2 = cards[(i + 4) % 5].rank;
             if (kicker1 < kicker2)
-                std::swap(kicker1, kicker2);                                                 // Ensure kicker1 is the highest
+            {
+                swap(kicker1, kicker2); // Ensure kicker1 is the highest
+            }
             return THREE_OF_A_KIND * mult_factor + threeRank * 225 + kicker1 * 15 + kicker2; // 225 = 15*15
         }
     }
@@ -150,7 +163,7 @@ int score_hand(std::vector<Card> &cards)
                 {
                     if (kickers[l] < kickers[l + 1])
                     {
-                        std::swap(kickers[l], kickers[l + 1]);
+                        swap(kickers[l], kickers[l + 1]);
                     }
                 }
             }
@@ -159,29 +172,93 @@ int score_hand(std::vector<Card> &cards)
     }
 
     // High card
-    int score = HIGH_CARD * mult_factor;
-    for (int i = 4; i >= 0; --i)
-    {
-        score += cards[i].rank * std::pow(15, i);
-    }
+    int score = cards[4].rank * pow(15, 4) + cards[3].rank * pow(15, 3) + cards[2].rank * pow(15, 2) + cards[1].rank * 15 + cards[0].rank;
     return score;
 }
 
-// Function to decode a hand and sort the cards by rank using insertion sort
-std::vector<Card> decode_and_sort_hand(int hand)
+void merge(vector<int> &a, vector<int> &scores, int left, int mid, int right)
 {
-    std::vector<Card> cards(5);
-    for (int i = 0; i < 5; ++i)
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
+
+    // Create temporary vectors
+    vector<int> L(n1), R(n2);
+    vector<int> LS(n1), RS(n2);
+
+    // Copy data to temp vectors
+    for (int i = 0; i < n1; i++)
     {
-        int card = hand % 52;
-        cards[i] = Card(card / 4, card % 4);
-        hand /= 52;
+        L[i] = a[left + i];
+        LS[i] = scores[left + i];
+    }
+    for (int j = 0; j < n2; j++)
+    {
+        R[j] = a[mid + 1 + j];
+        RS[j] = scores[mid + 1 + j];
     }
 
-    // Sort the cards by rank
-    insertion_sort(cards);
+    // Merge the temp vectors back into the original vectors
+    int i = 0, j = 0, k = left;
+    while (i < n1 && j < n2)
+    {
+        if (LS[i] <= RS[j])
+        {
+            a[k] = L[i];
+            scores[k] = LS[i];
+            i++;
+        }
+        else
+        {
+            a[k] = R[j];
+            scores[k] = RS[j];
+            j++;
+        }
+        k++;
+    }
 
-    return cards;
+    // Copy any remaining elements of L[], LS[]
+    while (i < n1)
+    {
+        a[k] = L[i];
+        scores[k] = LS[i];
+        i++;
+        k++;
+    }
+
+    // Copy any remaining elements of R[], RS[]
+    while (j < n2)
+    {
+        a[k] = R[j];
+        scores[k] = RS[j];
+        j++;
+        k++;
+    }
+}
+
+// Recursive function to sort the vector using merge sort
+void mergeSort(vector<int> &a, vector<int> &scores, int left, int right, int depth = 0)
+{
+    if (left < right)
+    {
+        int mid = left + (right - left) / 2;
+
+        if (depth < MAX_DEPTH)
+        {
+            // Sort first and second halves in parallel
+            thread leftThread(mergeSort, ref(a), ref(scores), left, mid, depth + 1);
+            mergeSort(a, scores, mid + 1, right, depth + 1);
+            leftThread.join();
+        }
+        else
+        {
+            // Perform a regular merge sort without threading
+            mergeSort(a, scores, left, mid, depth + 1);
+            mergeSort(a, scores, mid + 1, right, depth + 1);
+        }
+
+        // Merge the sorted halves
+        merge(a, scores, left, mid, right);
+    }
 }
 
 void poker_sort(vector<int> &a)
@@ -190,44 +267,8 @@ void poker_sort(vector<int> &a)
     for (int i = 0; i < a.size(); i++)
     {
         vector<Card> sorted_hand = decode_and_sort_hand(a[i]);
-        scores[i] = score_hand(sorted_hand);
+        int score = score_hand(sorted_hand);
+        scores[i] = score;
     }
-    // sort a by scores
-    for (int i = 1; i < a.size(); ++i)
-    {
-        int keyScore = scores[i];
-        int keyHand = a[i];
-        int j = i - 1;
-        // Move elements of a[0..i-1] and scores[0..i-1], that are greater than key, to one position ahead of their current position
-        while (j >= 0 && scores[j] > keyScore)
-        {
-            scores[j + 1] = scores[j];
-            a[j + 1] = a[j];
-            j = j - 1;
-        }
-        scores[j + 1] = keyScore;
-        a[j + 1] = keyHand;
-    }
-}
-
-int main()
-{
-    vector<int> a = {
-        312524498,
-        355399072,
-        328369252,
-        349203879,
-        357681668,
-        354759444,
-        357117544,
-        354803132,
-        357107992,
-        89302404};
-    poker_sort(a);
-    for (int i = 0; i < a.size(); i++)
-    {
-        cout << a[i] << " ";
-    }
-    cout << endl;
-    return 0;
+    mergeSort(a, scores, 0, a.size() - 1);
 }
