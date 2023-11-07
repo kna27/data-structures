@@ -1,10 +1,15 @@
-#include <iostream>
+/*
+    Data Structures 2023-2024 Lab 03:Poker Sort
+
+    @author Krish Arora
+*/
+
 #include <vector>
 #include <thread>
 
 using namespace std;
 
-const int MAX_DEPTH = 5;
+const int MAX_DEPTH = 4;
 enum HandType
 {
     HIGH_CARD = 1,
@@ -58,7 +63,6 @@ vector<Card> decode_and_sort_hand(int hand)
 
 int score_hand(vector<Card> &cards)
 {
-    // TODO check for pair first bc then cant be straight
     int mult_factor = 1000000;
     // Check for Ace-low straight (A-2-3-4-5)
     bool isAceLowStraight = (cards[0].rank == 0 && cards[1].rank == 1 && cards[2].rank == 2 && cards[3].rank == 3 && cards[4].rank == 12);
@@ -324,59 +328,4 @@ void poker_sort(vector<int> &a)
     vector<int> scores(n);
     score_hands_parallel(a, scores, 0, n - 1);
     merge_sort(a, scores, 0, n - 1);
-}
-
-#include <fstream>
-#include <chrono>
-using namespace chrono;
-
-void test_poker_sort()
-{
-    for (int i = 1; i <= 3; i++)
-    {
-
-        ifstream hands("hand" + to_string(i) + ".txt");
-        int N;
-        hands >> N;
-        vector<int> a(N);
-        for (int i = 0; i < N; i++)
-        {
-            hands >> a[i];
-        }
-
-        auto start = high_resolution_clock::now();
-        poker_sort(a);
-        auto end = high_resolution_clock::now();
-        ifstream sorted_hands("hand" + to_string(i) + "_sorted.txt");
-        int wrong = 0;
-        for (int i = 0; i < 1000; i++)
-        {
-            int curr;
-            sorted_hands >> curr;
-            wrong += curr != a[i];
-            if (curr != a[i])
-            {
-                cout << i << ' ' << curr << ' ' << a[i] << '\n';
-            }
-        }
-
-        auto duration = duration_cast<milliseconds>(end - start);
-        if (wrong == 0)
-        {
-            cout << "Your code was correct. It sorted in " << duration.count() << " milliseconds.\n";
-        }
-        else
-        {
-            cout << "Your code *might've* been correct in the event of equal hands, but it could very likely be wrong. There were " << wrong << " hands out of place, and your sort took " << duration.count() << " milliseconds.\n";
-        }
-    }
-}
-
-int main()
-{
-    for (int i = 0; i <= 5; i++)
-    {
-        test_poker_sort();
-        cout << "------" << endl;
-    }
 }
