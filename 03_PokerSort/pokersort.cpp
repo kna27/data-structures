@@ -127,17 +127,39 @@ int score_hand(vector<Card> &cards)
     }
 
     // Two pairs
-    if (cards[0].rank == cards[1].rank && cards[2].rank == cards[3].rank)
+    if ((cards[0].rank == cards[1].rank && cards[2].rank == cards[3].rank) ||
+        (cards[0].rank == cards[1].rank && cards[3].rank == cards[4].rank) ||
+        (cards[1].rank == cards[2].rank && cards[3].rank == cards[4].rank))
     {
-        return TWO_PAIRS * mult_factor + cards[1].rank * 225 + cards[3].rank * 15 + cards[4].rank;
-    }
-    else if (cards[0].rank == cards[1].rank && cards[3].rank == cards[4].rank)
-    {
-        return TWO_PAIRS * mult_factor + cards[1].rank * 225 + cards[4].rank * 15 + cards[2].rank;
-    }
-    else if (cards[1].rank == cards[2].rank && cards[3].rank == cards[4].rank)
-    {
-        return TWO_PAIRS * mult_factor + cards[2].rank * 225 + cards[4].rank * 15 + cards[0].rank;
+        int highPair, lowPair, kicker;
+
+        if (cards[0].rank == cards[1].rank)
+        {
+            highPair = cards[1].rank;
+            if (cards[2].rank == cards[3].rank)
+            {
+                lowPair = cards[2].rank;
+                kicker = cards[4].rank;
+            }
+            else
+            { // cards[3].rank == cards[4].rank
+                lowPair = cards[3].rank;
+                kicker = cards[2].rank;
+            }
+        }
+        else
+        { // cards[1].rank == cards[2].rank && cards[3].rank == cards[4].rank
+            highPair = cards[3].rank;
+            lowPair = cards[1].rank;
+            kicker = cards[0].rank;
+        }
+
+        // Ensure highPair is indeed the higher pair
+        if (lowPair > highPair)
+        {
+            swap(highPair, lowPair);
+        }
+        return TWO_PAIRS * mult_factor + highPair * 225 + lowPair * 15 + kicker;
     }
 
     // Pair
@@ -236,7 +258,7 @@ void merge(vector<int> &a, vector<int> &scores, int left, int mid, int right)
 }
 
 // Recursive function to sort the vector using merge sort
-void mergeSort(vector<int> &a, vector<int> &scores, int left, int right, int depth = 0)
+void merge_sort(vector<int> &a, vector<int> &scores, int left, int right, int depth = 0)
 {
     if (left < right)
     {
@@ -245,15 +267,15 @@ void mergeSort(vector<int> &a, vector<int> &scores, int left, int right, int dep
         if (depth < MAX_DEPTH)
         {
             // Sort first and second halves in parallel
-            thread leftThread(mergeSort, ref(a), ref(scores), left, mid, depth + 1);
-            mergeSort(a, scores, mid + 1, right, depth + 1);
-            leftThread.join();
+            thread left_thread(merge_sort, ref(a), ref(scores), left, mid, depth + 1);
+            merge_sort(a, scores, mid + 1, right, depth + 1);
+            left_thread.join();
         }
         else
         {
             // Perform a regular merge sort without threading
-            mergeSort(a, scores, left, mid, depth + 1);
-            mergeSort(a, scores, mid + 1, right, depth + 1);
+            merge_sort(a, scores, left, mid, depth + 1);
+            merge_sort(a, scores, mid + 1, right, depth + 1);
         }
 
         // Merge the sorted halves
@@ -270,5 +292,5 @@ void poker_sort(vector<int> &a)
         int score = score_hand(sorted_hand);
         scores[i] = score;
     }
-    mergeSort(a, scores, 0, a.size() - 1);
+    merge_sort(a, scores, 0, a.size() - 1);
 }
