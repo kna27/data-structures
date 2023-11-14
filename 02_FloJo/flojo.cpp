@@ -191,6 +191,14 @@ int main()
     l8->next->next = l8->next;
     vector<int> t8 = loopTail(l8);
     cout << "\tTest 8: " << (t8 == vector<int>{1, 1}) << '\n';
+
+    // Test 9: Multiple nodes, loop, tail
+    Link<int>* l9 = new Link<int>(1);
+    l9->next = new Link<int>(2);
+    l9->next->next = new Link<int>(3);
+    l9->next->next->next = nullptr;
+    vector<int> loopTailResult4 = loopTail(l9);
+    cout << "\tTest 9: " << (loopTailResult4 == vector<int>{0, 3}) << '\n';
     return 0;
 }
 */
