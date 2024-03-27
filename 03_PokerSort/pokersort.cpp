@@ -1,5 +1,5 @@
 /*
-    Data Structures 2023-2024 Lab 03:Poker Sort
+    Data Structures 2023-2024 Lab 03: Poker Sort
 
     @author Krish Arora
 */
