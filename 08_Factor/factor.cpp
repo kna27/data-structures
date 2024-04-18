@@ -8,27 +8,75 @@
 
 using namespace std;
 
-long long modPow(long long base, long long exponent, long long modulus)
+unsigned long modMul(unsigned long a, unsigned long b, unsigned long m)
 {
-    long long result = 1;
+    if (m == 1)
+    {
+        return 0;
+    }
+    unsigned long modA = a % m;
+    unsigned long modB = b % m;
+    unsigned long prod = modA * modB;
+    if (modA != 0 && prod / modA != modB)
+    {
+        unsigned long result = 0;
+        a = modA;
+        while (b > 0)
+        {
+            if (b & 1)
+            {
+                if (result > m - a)
+                {
+                    result -= (m - a);
+                }
+                else
+                {
+                    result += a;
+                }
+            }
+            if (a < m - a)
+            {
+                a <<= 1;
+            }
+            else
+            {
+                a = (a - (m - a)) % m;
+            }
+            b >>= 1;
+        }
+        return result;
+    }
+    else
+    {
+        return prod % m;
+    }
+}
+
+unsigned long modPow(unsigned long base, unsigned long exponent, unsigned long modulus)
+{
+    if (modulus == 1)
+    {
+        return 0;
+    }
+    unsigned long result = 1;
     base %= modulus;
     while (exponent > 0)
     {
         if (exponent & 1)
         {
-            result = (result * base) % modulus;
+            result = modMul(result, base, modulus);
         }
         exponent >>= 1;
-        base = (base * base) % modulus;
+        base = modMul(base, base, modulus);
     }
     return result;
 }
 
-long long gcd(long long a, long long b)
+unsigned long gcd(unsigned long a, unsigned long b)
 {
     while (b != 0)
     {
-        long long t = b;
+        unsigned long t = b;
         b = a % b;
         a = t;
     }
@@ -93,22 +141,18 @@ unsigned long long pollardsRho(unsigned long long n)
     {
         return 2;
     }
-    long long x = 2 + rand() % (n - 3);
-    unsigned long long c = 1 + rand() % (n - 1);
-    unsigned long long y = x;
-    unsigned long long d = 1;
+    long long x = 2, y = 2, d = 1;
+    unsigned long long c = 1;
+    auto f = [n, c](long long x) -> long long
+    { return (modPow(x, 2, n) + c) % n; };
+
     while (d == 1)
     {
-        x = (modPow(x, 2, n) + c + n) % n;
-        y = (modPow(y, 2, n) + c + n) % n;
-        long long diff = abs(static_cast<long long>(x) - static_cast<long long>(y));
-        d = gcd(diff, n);
-        if (d == n)
-        {
-            return pollardsRho(n);
-        }
+        x = f(x);
+        y = f(f(y));
+        d = gcd(abs(x - y), n);
     }
-    return d;
+    return d == n ? 1 : d;
 }
 
 void addFactor(vector<unsigned long> &factors, unsigned long p, unsigned long e)
@@ -146,22 +190,20 @@ vector<unsigned long> factor(unsigned long n)
     {
         if (millerRabin(n))
         {
-            if (!factors.empty() && factors[factors.size() - 2] == n)
-            {
-                factors.back()++;
-            }
-            else
-            {
-                addFactor(factors, n, 1);
-            }
+            addFactor(factors, n, 1);
         }
         else
         {
-            unsigned long long primeFactor = pollardsRho(n);
-            vector<unsigned long> smallest = factor(primeFactor);
-            vector<unsigned long> additional = factor(n / primeFactor);
-            factors.insert(factors.end(), smallest.begin(), smallest.end());
-            factors.insert(factors.end(), additional.begin(), additional.end());
+            unsigned long long nFactor = pollardsRho(n);
+            if (nFactor == 1)
+            {
+                addFactor(factors, n, 1);
+            }
+            else
+            {
+                vector<unsigned long> smallerFactors = factor(nFactor);
+                factors.insert(factors.end(), smallerFactors.begin(), smallerFactors.end());
+            }
         }
     }
     return factors;
