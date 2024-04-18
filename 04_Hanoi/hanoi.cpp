@@ -5,7 +5,8 @@
 */
 #include <vector>
 
-using namespace std;
+using std::vector;
+using std::swap;
 
 typedef vector<int> VI;
 typedef vector<long> VL;

@@ -6,7 +6,8 @@
 
 #include <vector>
 
-using namespace std;
+using std::vector;
+using std::min;
 
 #define VI vector<int>
 

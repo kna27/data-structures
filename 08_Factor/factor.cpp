@@ -6,7 +6,7 @@
 
 #include <vector>
 
-using namespace std;
+using std::vector;
 
 unsigned long modMul(unsigned long a, unsigned long b, unsigned long m)
 {

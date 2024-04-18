@@ -7,7 +7,9 @@
 #include <vector>
 #include <thread>
 
-using namespace std;
+using std::vector;
+using std::swap;
+using std::thread;
 
 const int MAX_DEPTH = 4;
 enum HandType

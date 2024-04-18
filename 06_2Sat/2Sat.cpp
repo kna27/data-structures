@@ -10,7 +10,13 @@
 #include <queue>
 #include <algorithm>
 
-using namespace std;
+using std::vector;
+using std::stack;
+using std::queue;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::fill;
 
 const int MAX = 10001;
 
