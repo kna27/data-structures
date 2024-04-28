@@ -5,31 +5,106 @@
 */
 
 #include <vector>
-#include <iostream>
 
-using namespace std;
+using std::pair;
+using std::vector;
 
-long long modPow(long long base, long long exponent, long long modulus)
+unsigned long modMul(unsigned long a, unsigned long b, unsigned long m)
 {
-    long long result = 1;
+    if (m == 1)
+    {
+        return 0;
+    }
+    unsigned long modA = a % m;
+    unsigned long modB = b % m;
+    unsigned long prod = modA * modB;
+    if (modA != 0 && prod / modA != modB)
+    {
+        unsigned long result = 0;
+        a = modA;
+        while (b > 0)
+        {
+            if (b & 1)
+            {
+                if (result > m - a)
+                {
+                    result -= (m - a);
+                }
+                else
+                {
+                    result += a;
+                }
+            }
+            if (a < m - a)
+            {
+                a <<= 1;
+            }
+            else
+            {
+                a = (a - (m - a)) % m;
+            }
+            b >>= 1;
+        }
+        return result;
+    }
+    else
+    {
+        return prod % m;
+    }
+}
+
+unsigned long modPow(unsigned long base, unsigned long exponent, unsigned long modulus)
+{
+    if (modulus == 1)
+    {
+        return 0;
+    }
+    unsigned long result = 1;
     base %= modulus;
     while (exponent > 0)
     {
         if (exponent & 1)
         {
-            result = (result * base) % modulus;
+            result = modMul(result, base, modulus);
         }
         exponent >>= 1;
-        base = (base * base) % modulus;
+        base = modMul(base, base, modulus);
     }
     return result;
 }
 
-long long gcd(long long a, long long b)
+long modInv(long a, long m)
+{
+    long m0 = m;
+    long y = 0, x = 1;
+
+    if (m == 1)
+        return 0;
+
+    while (a > 1)
+    {
+        long q = a / m;
+        long t = m;
+
+        m = a % m;
+        a = t;
+        t = y;
+
+        y = x - q * y;
+        x = t;
+    }
+
+    if (x < 0)
+        x += m0;
+
+    return x;
+}
+
+static unsigned long gcd(unsigned long a, unsigned long b)
 {
     while (b != 0)
     {
-        long long t = b;
+        unsigned long t = b;
         b = a % b;
         a = t;
     }
@@ -94,22 +169,18 @@ unsigned long long pollardsRho(unsigned long long n)
     {
         return 2;
     }
-    long long x = 2 + rand() % (n - 3);
-    unsigned long long c = 1 + rand() % (n - 1);
-    unsigned long long y = x;
-    unsigned long long d = 1;
+    long long x = 2, y = 2, d = 1;
+    unsigned long long c = 1;
+    auto f = [n, c](long long x) -> long long
+    { return (modPow(x, 2, n) + c) % n; };
+
     while (d == 1)
     {
-        x = (modPow(x, 2, n) + c + n) % n;
-        y = (modPow(y, 2, n) + c + n) % n;
-        long long diff = abs(static_cast<long long>(x) - static_cast<long long>(y));
-        d = gcd(diff, n);
-        if (d == n)
-        {
-            return pollardsRho(n);
-        }
+        x = f(x);
+        y = f(f(y));
+        d = gcd(abs(x - y), n);
     }
-    return d;
+    return d == n ? 1 : d;
 }
 
 void addFactor(vector<unsigned long> &factors, unsigned long p, unsigned long e)
@@ -147,216 +218,114 @@ vector<unsigned long> factor(unsigned long n)
     {
         if (millerRabin(n))
         {
-            if (!factors.empty() && factors[factors.size() - 2] == n)
-            {
-                factors.back()++;
-            }
-            else
-            {
-                addFactor(factors, n, 1);
-            }
+            addFactor(factors, n, 1);
         }
         else
         {
-            unsigned long long primeFactor = pollardsRho(n);
-            vector<unsigned long> smallest = factor(primeFactor);
-            vector<unsigned long> additional = factor(n / primeFactor);
-            factors.insert(factors.end(), smallest.begin(), smallest.end());
-            factors.insert(factors.end(), additional.begin(), additional.end());
+            unsigned long long nFactor = pollardsRho(n);
+            if (nFactor == 1)
+            {
+                addFactor(factors, n, 1);
+            }
+            else
+            {
+                vector<unsigned long> smallerFactors = factor(nFactor);
+                factors.insert(factors.end(), smallerFactors.begin(), smallerFactors.end());
+            }
         }
     }
     return factors;
 }
 
-
-long long modInv(long long a, long long n)
+bool isQuadraticResidue(long a, long p)
 {
-    long long m0 = n;
-    long long y = 0, x = 1;
-    if (n == 1)
+    if (p == 2)
     {
-        return 0;
+        return true;
     }
-    while (a > 1)
+    long amodp = a % p;
+    if (amodp == 0)
     {
-        long long q = a / n;
-        long long t = n;
-        n = a % n, a = t;
-        t = y;
-        y = x - q * y;
-        x = t;
+        return true;
     }
-    if (x < 0)
-    {
-        x += m0;
-    }
-    return x;
+    a = (amodp + p) % p;
+    return modPow(a, (p - 1) / 2, p) == 1;
 }
 
-// eulersCriterion
-bool eulersCriterion(long a, long p) {
-    long result = modPow(a, (p - 1) / 2, p);
-    return result == 1 || result == p - 1;
-}
-
-//modSqrt
-long modSqrt(long a, long p) {
-    if (p % 4 == 3) {
-        return modPow(a, (p + 1) / 4, p);
+vector<long> findRoots(long a, long b, long c, long p, long exp)
+{
+    vector<long> roots;
+    long modulus = 1;
+    for (int i = 0; i < exp; i++)
+    {
+        modulus *= p;
     }
-
-    long q = p - 1;
-    long s = 0;
-    while (q % 2 == 0) {
-        q /= 2;
-        s++;
-    }
-
-    long z = 2;
-    while (eulersCriterion(z, p)) {
-        z++;
-    }
-
-    long m = s;
-    long c = modPow(z, q, p);
-    long t = modPow(a, q, p);
-    long r = modPow(a, (q + 1) / 2, p);
-
-    while (t != 1) {
-        long i = 0;
-        long temp = t;
-        while (temp != 1) {
-            temp = (temp * temp) % p;
-            i++;
+    for (long x = 0; x < modulus; x++)
+    {
+        if ((modPow(x, 2, modulus) * a % modulus + b * x % modulus + c) % modulus == 0)
+        {
+            roots.push_back(x);
         }
-
-        long b = modPow(c, 1 << (m - i - 1), p);
-        m = i;
-        c = (b * b) % p;
-        t = (t * c) % p;
-        r = (r * b) % p;
     }
-
-    return r;
+    return roots;
 }
 
-std::vector<long> solveQuadraticModPrime(long a, long b, long c, long p) {
-    std::vector<long> solutions;
-    long invA = modInv(a, p); // Modular inverse of a
-    long discriminant = (modPow(b, 2, p) - 4 * invA * c) % p;
-    if (discriminant < 0) discriminant += p; // Ensure non-negative
-
-    if (!eulersCriterion(discriminant, p)) {
-        return solutions; // No solution exists
+vector<long> chineseRemainderTheorem(vector<pair<long, vector<long>>> &congruences, long m)
+{
+    vector<long> solutions;
+    for (long x = 0; x < m; x++)
+    {
+        bool valid = true;
+        for (const auto &[mod, roots] : congruences)
+        {
+            bool localValid = false;
+            for (long root : roots)
+            {
+                if (x % mod == root)
+                {
+                    localValid = true;
+                    break;
+                }
+            }
+            if (!localValid)
+            {
+                valid = false;
+                break;
+            }
+        }
+        if (valid)
+        {
+            solutions.push_back(x);
+        }
     }
-
-    // Assuming we have a function to find square roots modulo p
-    long sqrtD = modSqrt(discriminant, p);
-    long x1 = (modInv(2 * a, p) * (-b + sqrtD)) % p;
-    long x2 = (modInv(2 * a, p) * (-b - sqrtD)) % p;
-
-    if (x1 < 0) x1 += p;
-    if (x2 < 0) x2 += p;
-
-    solutions.push_back(x1);
-    if (x1 != x2) solutions.push_back(x2); // If two distinct solutions
-
     return solutions;
 }
 
-std::vector<long> chineseRemainderTheorem(const std::vector<long>& residues, const std::vector<long>& moduli) {
-    long product = 1;
-    for (long mod : moduli) {
-        product *= mod;
-    }
+vector<long> quad_solve(unsigned long n, long a, long b, long c)
+{
+    vector<unsigned long> factors = factor(n);
+    vector<pair<long, vector<long>>> solutions;
+    long combinedModulus = 1;
 
-    std::vector<long> solutions;
-    long result = 0;
-    for (size_t i = 0; i < moduli.size(); ++i) {
-        long pp = product / moduli[i];
-        result += residues[i] * modInv(pp, moduli[i]) * pp;
-        result %= product;
-    }
-
-    solutions.push_back(result); // For simplicity, we return one solution
-    return solutions;
-}
-
-
-std::vector<long> quadSolve(long n, long a, long b, long c) {
-    std::vector<long> solutions;
-
-    // Factorize n
-    std::vector<unsigned long> primeFactors = factor(n);
-    // Containers for CRT
-    std::vector<long> residues;
-    std::vector<long> moduli;
-
-    for (long p : primeFactors) {
-        // Solve the equation modulo p
-        std::vector<long> localSolutions = solveQuadraticModPrime(a, b, c, p);
-        if (localSolutions.empty()) {
-            return {}; // No solution for this prime factor
+    for (size_t i = 0; i < factors.size(); i += 2)
+    {
+        long p = factors[i];
+        long exp = factors[i + 1];
+        long primePower = 1;
+        for (int j = 0; j < exp; j++)
+        {
+            primePower *= p;
         }
 
-        // If solutions exist, prepare them for CRT
-        for (long sol : localSolutions) {
-            residues.push_back(sol);
-            moduli.push_back(p); // Assuming p is prime power
+        if (!isQuadraticResidue((modPow(b, 2, p) - (4 * a % p) * c % p + p) % p, p))
+        {
+            return {};
         }
+
+        vector<long> roots = findRoots(a, b, c, p, exp);
+        solutions.emplace_back(make_pair(primePower, roots));
+        combinedModulus *= primePower;
     }
 
-    // Use CRT to combine the solutions
-    solutions = chineseRemainderTheorem(residues, moduli);
-
-    // Ensure solutions are unique and sort them
-    sort(solutions.begin(), solutions.end());
-    solutions.erase(unique(solutions.begin(), solutions.end()), solutions.end());
-
-    // Filter solutions to be non-negative and less than n
-    std::vector<long> filteredSolutions;
-    for (long sol : solutions) {
-        if (sol >= 0 && sol < n) {
-            filteredSolutions.push_back(sol);
-        }
-    }
-
-    return filteredSolutions;
-}
-
-void printSolutions(const std::string& testCaseName, const std::vector<long>& solutions) {
-    std::cout << testCaseName << ": ";
-    if (solutions.empty()) {
-        std::cout << "No solutions";
-    } else {
-        for (size_t i = 0; i < solutions.size(); ++i) {
-            if (i > 0) std::cout << ", ";
-            std::cout << solutions[i];
-        }
-    }
-    std::cout << std::endl;
-}
-
-int main() {
-    // Test Case 1
-    std::vector<long> solutions1 = quadSolve(7, 1, 0, -1);
-    printSolutions("Test Case 1", solutions1);
-
-    // Test Case 2
-    std::vector<long> solutions2 = quadSolve(3, 1, 1, 1);
-    printSolutions("Test Case 2", solutions2);
-
-    // Test Case 3
-    std::vector<long> solutions3 = quadSolve(11, 1, 0, 4);
-    printSolutions("Test Case 3", solutions3);
-
-    // Test Case 4
-    std::vector<long> solutions4 = quadSolve(15, 1, 0, -1);
-    printSolutions("Test Case 4", solutions4);
-
-    // Test Case 5
-    std::vector<long> solutions5 = quadSolve(10, 1, 0, 2);
-    printSolutions("Test Case 5", solutions5);
-
-    return 0;
+    return chineseRemainderTheorem(solutions, combinedModulus);
 }
