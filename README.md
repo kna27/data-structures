@@ -13,3 +13,4 @@ Labs for Data Structures BCA 2023-2024 taught by Dr. Nevard.
 | [Orders](./07_Orders/) | 91% |
 | [Factor](./08_Factor/) | 90% |
 | [QuadMod](./09_QuadMod/) | 90% |
+| [Discard](./10_Discard/) | 97.5% |
